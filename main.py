@@ -31,7 +31,7 @@ class User:
                   as json_file:
             json.dump(users, json_file, ensure_ascii=False, indent=4)
         return True
-
+    
     def user_authorization(user_name, user_password, users):
         for user in users:
             if user['user_name'] == user_name and \
@@ -48,6 +48,15 @@ class User:
 class Controller:
 
     @staticmethod
+    def load_data():
+        data = []
+        if os.path.isfile(PATH_DATA + "data.json"):
+            with open(PATH_DATA + "data.json", "r", encoding="utf-8") \
+                      as data_file:
+                data = json.load(data_file)
+        return data if data else []
+
+    @staticmethod
     def writing_data(user_name, text):
         name_and_tag = ', '.join(set(re.findall(r'(#\w+|@\w+)', text)))
         data = Controller.load_data()
@@ -57,15 +66,6 @@ class Controller:
         with open(PATH_DATA + "data.json", "w", encoding="utf-8") \
                   as data_file:
             json.dump(data, data_file, ensure_ascii=False, indent=4)
-
-    @staticmethod
-    def load_data():
-        data = []
-        if os.path.isfile(PATH_DATA + "data.json"):
-            with open(PATH_DATA + "data.json", "r", encoding="utf-8") \
-                      as data_file:
-                data = json.load(data_file)
-        return data if data else []
 
     def print_found(what_look):
         data = Controller.load_data()
@@ -77,13 +77,16 @@ while True:
     print(inspect.cleandoc('''Что желаете (введите номер пункта):
                         1. Зарегистрироваться
                         2. Авторизироваться
-                        3. (или любой другой символ). Выйти из программы
+                        3. Выйти из программы
                         '''))
     user_choice = input()
     if user_choice == '1':  # Регистрация
-        user_name = input("Введите ваш ник: ")
+        user_name = input("Введите ваш логин: ")
         if len(user_name) == 0:
             print('Имя пользователя не может быть пустым')
+            continue
+        elif not re.match(r"@\b\w+\b", user_name):
+            print('Ведите корректное имя пользователя')
             continue
         user_password = input('Введите ваш пароль: ')
         users = User.load_users()
@@ -134,7 +137,7 @@ elif user_choice == '3':  # Поиск по имени пользователя 
         print('Имя пользователя не может быть пустым')
     else:
         if User.is_user_exist(user_to_search, users):
-            Controller.print_found('@' + user_to_search)
+            Controller.print_found(user_to_search)
 elif user_choice == '4':  # Поиск по текстам конкретного пользователя
     user_to_search = input('Введите иимя пользователя: ')
     if len(user_to_search) == 0:
@@ -144,4 +147,3 @@ elif user_choice == '4':  # Поиск по текстам конкретног�
         for letter in data:
             if user_to_search == letter['user_name']:
                 print(letter['text'])
-                
