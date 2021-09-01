@@ -9,16 +9,19 @@ PATH_DATA = f"{DIR}/data/"
 
 class User:
     @staticmethod
-    def user_registration(user_name: str, user_password: str, users: list) -> bool:
+    def user_registration(user_name: str, user_password: str, 
+                          users: list) -> bool:
         for user in users:
-            if user['user_name'] == user_name:  # Такой пользователь уже зарегистрирован
+            if user['user_name'] == user_name:  # Такой пользователь 
+                                                # уже зарегистрирован
                 return False
-        user = User(user_name, user_password)
+        user = User({"user_name": user_name,
+                     "user_password": user_password})
         user.__save_user_to_json()
         return True
     
     @staticmethod
-    def is_user_exist(user_to_search, users) -> bool:
+    def is_user_exist(user_to_search: str, users: list) -> bool:
         for user in users:
             if user['user_name'] == user_to_search:
                 return True
@@ -35,16 +38,24 @@ class User:
                   as json_file:
             json.dump(users, json_file, ensure_ascii=False, indent=4)
 
-    def user_authorization(user_name, user_password, users):
+    def user_authorization(user_name: str, user_password: str, 
+                           users: list) -> bool:
         for user in users:
             if user['user_name'] == user_name and \
                user['user_password'] == user_password:
                 return True
         return False
 
+    def is_user_name_correct(self, user_name) -> bool:
+        if (len(user_name) == 0) or \
+            (not re.match(r"@\b\w+\b", user_name)):
+            ConsoleInterface.print_not_correct_user_name()           
+            return False
+        return True
+
 class Controller:
     @staticmethod
-    def writing_data(user_name, text):
+    def writing_data(user_name: str, text: str):
         name_and_tag = ', '.join(set(re.findall(r'(#\w+|@\w+)', text)))
         data = read_json("data.json") + [{"user_name": user_name, \
                             "name_and_tag": name_and_tag, \
@@ -53,13 +64,26 @@ class Controller:
                   as data_file:
             json.dump(data, data_file, ensure_ascii=False, indent=4)
 
-    def print_found(what_look):
+    def print_found(what_look: str):
         for letter in read_json("data.json"):
             if what_look in letter['name_and_tag'].lower():
                 print(letter['text'])
 
+class UserRegistrationError(Exception):
+    def __init__(self):
+        self.text = "User Registration Error"
 
-def read_json(file_name) -> list:
+    def __str__(self):
+        return self.text
+
+class ConsoleInterface:
+    def __init__(self, user_controller: User):
+        self.user_controller = user_controller
+
+    def print_not_correct_user_name(self):
+        print('Введите корректное имя пользователя.')
+
+def read_json(file_name: str) -> list:
     if os.path.isfile(PATH_DATA + file_name):
         with open(PATH_DATA + file_name, "r", encoding="utf-8") \
                     as read_file:
@@ -75,18 +99,14 @@ while True:
     user_choice = input()
     if user_choice == '1':  # Регистрация
         user_name = input("Введите ваш логин: ")
-        if len(user_name) == 0:
-            print('Имя пользователя не может быть пустым')
-            continue
-        elif not re.match(r"@\b\w+\b", user_name):
-            print('Ведите корректное имя пользователя')
+        if not User.is_user_name_correct(user_name):
             continue
         user_password = input('Введите ваш пароль: ')
         users = read_json("users.json")
         if User.user_registration(user_name, user_password, users):
             print('Пользователь успешно добавлен')
-        else: 
-            print('Ошибка регисрации пользователя')
+        else:
+            print('Ошибка регистрации пользователя')
         continue
     elif user_choice == '2':  # Авторизация
         user_name = input("Введите ваш ник: ")
