@@ -7,12 +7,40 @@ DIR = os.path.dirname(os.path.abspath(__file__))
 PATH_DATA = f"{DIR}/data/"
 
 
+class UsernameEmptyError(Exception):
+    def __init__(self):
+        self.text = f"Ваш логин пустой"
+
+    def __str__(self):
+        return self.text
+
+class UsernameNotCorrectError(Exception):
+    def __init__(self, username):
+        self.text = f"{username} должен начинаться с @"
+
+    def __str__(self):
+        return self.text
+
+class UserAuthorizationError(Exception):
+    def __init__(self):
+        self.text = f"Ошибка в имени или пароле пользователя"
+
+    def __str__(self):
+        return self.text
+
+class TagLenError(Exception):
+    def __init__(self):
+        self.text = f"Минимальная длина хештега 3"
+
+    def __str__(self):
+        return self.text
+
 class User:
     @staticmethod
     def user_registration(user_name: str, user_password: str) -> str:
         users = read_json("users.json")
         if User.is_user_exist(user_name, users):
-            return 'Такой пользователь уже зарегистрирован'
+            return 'Такой пользователь уже существует'
         user = User({"user_name": user_name, \
                 "user_password": user_password})
         user.__save_user_to_json(users)
@@ -27,12 +55,9 @@ class User:
 
     @staticmethod
     def is_user_name_correct(user_name: str) -> bool:
-        if len(user_name) == 0:
-            print('Имя пользователя не может быть пустым')
-            return False
-        elif not re.match(r"@\b\w+\b", user_name):
-            print('Ведите корректное имя пользователя')
-            return False
+        if not len(user_name): raise UsernameEmptyError
+        if not re.match(r"@\b\w+\b", user_name): 
+            raise UsernameNotCorrectError(user_name)
         return True
 
     @staticmethod
@@ -42,6 +67,7 @@ class User:
             if user['user_name'] == user_name and \
                user['user_password'] == user_password:
                 return True
+        raise UserAuthorizationError
         return False
 
     def __init__(self, user_hash):
@@ -70,8 +96,7 @@ class Controller:
     def search_tag(tag_to_search: str):
     # Поиск по хэштегу        
         if len(tag_to_search) < 3:
-            print('Минимальная длина хештега для поиска 3')
-            return
+            raise TagLenError
         while tag_to_search[-1] in 'уеёаоэяиюый':  # Убирем окончание
             tag_to_search = tag_to_search[:len(tag_to_search)-1]
         if tag_to_search.startswith('#'):
@@ -120,13 +145,21 @@ if __name__ == '__main__':
         if user_choice == '1':  # Регистрация
             user_name = input("Введите ваш логин: ")
             user_password = input('Введите ваш пароль: ')
-            if User.is_user_name_correct(user_name):
-                print(User.user_registration(user_name, user_password))
+            try:
+                user_correct = User.is_user_name_correct(user_name)
+            except UsernameEmptyError:
+                print("Ваш username пуст :(")
+            except UsernameNotCorrectError:
+                print("Ваш username введён неверно. Он должен начинаться @")
+            else:
+                if user_correct: print(User.user_registration(user_name, user_password))
             continue
         elif user_choice == '2':  # Авторизация
             user_name = input("Введите ваш ник: ")
             user_password = input('Введите ваш пароль: ')
-            if not User.user_authorization(user_name, user_password):
+            try:
+                user_correct = User.user_authorization(user_name, user_password)
+            except UserAuthorizationError:
                 print('Ошибка в имени или пароле пользователя')
                 continue
             else:
